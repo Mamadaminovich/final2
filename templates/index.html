@@ -1,0 +1,52 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Switch Views</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 50px auto;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+        }
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Switch Views</h1>
+        <button><a href="{% url 'admin-list-create' %}" style="text-decoration: none; color: #fff;">Admins</a></button>
+        <button><a href="{% url 'category-list-create' %}" style="text-decoration: none; color: #fff;">Categories</a></button>
+        <button><a href="{% url 'customer-list-create' %}" style="text-decoration: none; color: #fff;">Customers</a></button>
+        <button><a href="{% url 'product-list-create' %}" style="text-decoration: none; color: #fff;">Products</a></button>
+        <button><a href="{% url 'shopcard-list-create' %}" style="text-decoration: none; color: #fff;">ShopCards</a></button>
+        <button><a href="{% url 'items-list-create' %}" style="text-decoration: none; color: #fff;">Items</a></button>
+        <button style="background-color:#62a03f;"><a href="{% url 'schema-swagger-ui' %}" style="text-decoration: none; color: #fff;">Swagger</a></button>
+    </div>
+</body>
+</html>

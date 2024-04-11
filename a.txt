@@ -1,0 +1,32 @@
+# views.py
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+
+# Endpoint to return purchase history of a specific user
+@api_view(['GET'])
+def purchase_history(request, user_id):
+    # Logic to fetch purchase history for the user with user_id
+    return Response({"message": f"Purchase history for user {user_id}"})
+
+# Endpoint to check total purchase amount of a customer
+@api_view(['POST'])
+def check_purchase_amount(request):
+    total_amount = request.data.get('totalAmount')
+    if total_amount > 1000000:
+        return Response({"message": "Total purchase amount is greater than 1000000 soum"})
+    else:
+        return Response({"message": "Total purchase amount is not greater than 1000000 soum"})
+
+# Endpoint to get total number of products in the market
+@api_view(['GET'])
+def total_products(request):
+    # Logic to calculate total number of products available in the market
+    total_products = 5000
+    return Response({"totalProducts": total_products})
+
+# Endpoint to get list of expired goods
+@api_view(['GET'])
+def expired_goods(request):
+    # Logic to fetch list of goods that have expired
+    expired_goods = ['Item1', 'Item2']
+    return Response({"expiredGoods": expired_goods})
