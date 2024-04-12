@@ -1,5 +1,7 @@
 from django.db import models
-
+from django.db import transaction
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 class Admin(models.Model):
     name = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
@@ -54,25 +56,25 @@ class Purchase(models.Model):
 
 class ShopCard(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
-    items = models.ManyToManyField(Product)
     created_at = models.DateTimeField(auto_now_add=True)
-    
-    class Meta:
-        db_table = 'shopping_api_shopcard'
         
     def __str__(self) -> str:
         return str(self.customer)
     
-  
 class Item(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.IntegerField()
     shop_card = models.ForeignKey(ShopCard, on_delete=models.CASCADE)
-    class Meta:
-        db_table = 'shopping_api_item'
-        unique_together = ('product', 'shop_card')
-          
-    def __str__(self) -> str:
-        return str(self.product) 
 
+    class Meta:
+        db_table = 'shop_app_item'
+        unique_together = ('product', 'shop_card')
+
+    def __str__(self):
+        return str(self.product)
     
+@receiver(post_save, sender=Purchase)
+def update_product_quantity(sender, instance, created, **kwargs):
+    if created:
+        with transaction.atomic():
+            instance.product.update_quantity(instance.quantity)

@@ -1,5 +1,12 @@
 from django.contrib import admin
 from .models import *
+admin.site.site_header = 'Shop Store Admin Panel'
+admin.site.site_title = 'Shop Store'
+
+@admin.register(Admin)
+class MyAdmin(admin.ModelAdmin):
+    list_display = ('name',) 
+    search_fields = ('name', 'email')
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):

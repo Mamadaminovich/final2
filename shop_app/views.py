@@ -7,29 +7,33 @@ from django.db.models import Sum, Count
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from datetime import datetime, timedelta
+from django.utils import timezone
+from rest_framework.decorators import api_view, permission_classes
+from django.shortcuts import get_object_or_404
+from rest_framework.exceptions import ValidationError
+from .permissions import IsAuthenticatedAndAdminOrReadOnly
 
 
 class ModelListCreateAPIView(generics.ListCreateAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedAndAdminOrReadOnly]
     serializer_class = None
     queryset = None
 
 class ModelRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsAuthenticated]
-    serializer_class = None  
+    permission_classes = [IsAuthenticatedAndAdminOrReadOnly]
+    serializer_class = None
     queryset = None
 
-# Admin views
-class AdminListCreateAPIView(ModelListCreateAPIView):
-    serializer_class = AdminSerializer
+class AdminListCreateAPIView(generics.ListCreateAPIView):
     queryset = Admin.objects.all()
-
-class AdminRetrieveUpdateDestroyAPIView(ModelRetrieveUpdateDestroyAPIView):
     serializer_class = AdminSerializer
-    queryset = Admin.objects.all()
+    permission_classes = [IsAuthenticatedAndAdminOrReadOnly]
 
-# Category views
+class AdminRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Admin.objects.all()
+    serializer_class = AdminSerializer
+    permission_classes = [IsAuthenticatedAndAdminOrReadOnly]
+
 class CategoryListCreateAPIView(ModelListCreateAPIView):
     serializer_class = CategorySerializer
     queryset = Category.objects.all()
@@ -38,7 +42,6 @@ class CategoryRetrieveUpdateDestroyAPIView(ModelRetrieveUpdateDestroyAPIView):
     serializer_class = CategorySerializer
     queryset = Category.objects.all()
 
-# Customer views
 class CustomerListCreateAPIView(generics.ListCreateAPIView):
     queryset = Customer.objects.all()
     serializer_class = CustomerSerializer
@@ -47,7 +50,6 @@ class CustomerRetrieveUpdateDestroyAPIView(ModelRetrieveUpdateDestroyAPIView):
     serializer_class = CustomerSerializer
     queryset = Customer.objects.all()
 
-# Product views
 class ProductListCreateAPIView(ModelListCreateAPIView):
     serializer_class = ProductSerializer
     queryset = Product.objects.all()
@@ -56,27 +58,79 @@ class ProductRetrieveUpdateDestroyAPIView(ModelRetrieveUpdateDestroyAPIView):
     serializer_class = ProductSerializer
     queryset = Product.objects.all()
 
-# ShopCard views
-class ShopCardListCreateAPIView(ModelListCreateAPIView):
-    serializer_class = ShopCardSerializer
-    queryset = ShopCard.objects.all()
-
-class ShopCardRetrieveUpdateDestroyAPIView(ModelRetrieveUpdateDestroyAPIView):
-    serializer_class = ShopCardSerializer
-    queryset = ShopCard.objects.all()
-
-# Item views
 class ItemsListCreateAPIView(generics.ListCreateAPIView):
     queryset = Item.objects.all()
     serializer_class = ItemSerializer
-    
-# class ItemsListCreateAPIView(ModelListCreateAPIView):
-#     serializer_class = ItemSerializer
-#     queryset = Item.objects.all()
 
 class ItemsRetrieveUpdateDestroyAPIView(ModelRetrieveUpdateDestroyAPIView):
     serializer_class = ItemSerializer
     queryset = Item.objects.all()
+
+class ShopCardListCreateAPIView(generics.ListCreateAPIView):
+    queryset = ShopCard.objects.all()
+    serializer_class = ShopCardSerializer
+    permission_classes = [IsAuthenticatedAndAdminOrReadOnly]
+
+class ShopCardRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = ShopCard.objects.all()
+    serializer_class = ShopCardSerializer
+    permission_classes = [IsAuthenticatedAndAdminOrReadOnly]
+
+@api_view(['POST'])
+def add_to_cart(request):
+    customer_id = request.data.get('customer_id')
+    product_id = request.data.get('product_id')
+    quantity = request.data.get('quantity')
+
+    customer = get_object_or_404(Customer, pk=customer_id)
+    product = get_object_or_404(Product, pk=product_id)
+
+    try:
+        quantity = int(quantity)
+        if quantity <= 0:
+            raise ValueError("Quantity must be a positive integer")
+    except (TypeError, ValueError):
+        return Response({'error': 'Invalid quantity'}, status=status.HTTP_400_BAD_REQUEST)
+
+    shop_cart, created = ShopCard.objects.get_or_create(customer=customer)
+    Item.objects.create(product=product, quantity=quantity, shop_card=shop_cart)
+    
+    return Response({'message': 'Item added to cart successfully'}, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def purchase_history(request, customer_id):
+    purchases = Purchase.objects.filter(customer_id=customer_id)
+    serializer = PurchaseSerializer(purchases, many=True)
+    return Response(serializer.data)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def check_total_purchase(request, customer_id):
+    total_purchase = Purchase.objects.filter(customer_id=customer_id).aggregate(Sum('quantity'))['quantity__sum']
+    if total_purchase and total_purchase > 1000000:
+        return Response({'message': 'Total purchase exceeds $1000000'}, status=status.HTTP_200_OK)
+    else:
+        return Response({'message': 'Total purchase does not exceed $1000000'}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def make_purchase(request):
+    customer_id = request.data.get('customer_id')
+    product_id = request.data.get('product_id')
+    quantity = request.data.get('quantity')
+
+    customer = get_object_or_404(Customer, pk=customer_id)
+    product = get_object_or_404(Product, pk=product_id)
+
+    if quantity <= 0:
+        return Response({'error': 'Invalid quantity'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if customer.make_purchase(product, quantity):
+        Purchase.objects.create(customer=customer, product=product, quantity=quantity)
+        return Response({'message': 'Purchase successful'}, status=status.HTTP_201_CREATED)
+    else:
+        return Response({'error': 'Insufficient balance or quantity not available'}, status=status.HTTP_400_BAD_REQUEST)
 
 class PurchaseHistoryAPIView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
@@ -85,7 +139,7 @@ class PurchaseHistoryAPIView(generics.ListAPIView):
     def get_queryset(self):
         customer_id = self.kwargs['customer_id']
         return Purchase.objects.filter(customer_id=customer_id)
-    
+     
 class CheckTotalPurchase(APIView):
     def get(self, request, customer_id):
         total_purchase = Purchase.objects.filter(customer_id=customer_id).aggregate(Sum('quantity'))['quantity__sum']
@@ -101,7 +155,7 @@ class TotalProducts(APIView):
     
 class ExpiredProducts(APIView):
     def get(self, request):
-        threshold_date = datetime.now() - timedelta(days=30)
+        threshold_date = timezone.now() - timezone.timedelta(days=30)
         expired_products = Product.objects.filter(purchase__purchase_date__lte=threshold_date)
         serialized_products = ProductSerializer(expired_products, many=True)
         return Response(serialized_products.data, status=status.HTTP_200_OK)
@@ -110,13 +164,15 @@ class MostSoldProduct(APIView):
     def get(self, request):
         most_sold_product = Product.objects.annotate(total_sales=Count('purchase')).order_by('-total_sales').first()
         if most_sold_product:
-            
             serialized_product = ProductSerializer(most_sold_product)
             return Response(serialized_product.data, status=status.HTTP_200_OK)
         else:
             return Response({'message': 'No product found'}, status=status.HTTP_404_NOT_FOUND)
-        
+       
 class OptionalUserRequest(APIView):
+    def get(self, request):
+        return Response({'message': 'Optional user request GET method called'}, status=status.HTTP_200_OK)
+
     def post(self, request):
         if 'optional_user' in request.data:
             optional_user_data = request.data['optional_user']
@@ -124,12 +180,12 @@ class OptionalUserRequest(APIView):
             return Response({'message': 'Request processed successfully with optional user'}, status=status.HTTP_200_OK)
         else:
             return Response({'error': 'Optional user data not provided'}, status=status.HTTP_400_BAD_REQUEST)
-        
+
 class PurchaseView(APIView):
     def post(self, request):
-        customer_id = request.data.get('customer_id')
-        product_id = request.data.get('product_id')
-        quantity = request.data.get('quantity')
+        customer_id = int(request.data.get('customer_id'))  # Convert to integer
+        product_id = int(request.data.get('product_id'))    # Convert to integer
+        quantity = int(request.data.get('quantity'))        # Convert to integer
 
         try:
             customer = Customer.objects.get(pk=customer_id)
@@ -137,16 +193,14 @@ class PurchaseView(APIView):
         except (Customer.DoesNotExist, Product.DoesNotExist):
             return Response({'error': 'Customer or product not found'}, status=status.HTTP_404_NOT_FOUND)
 
+        if quantity <= 0:
+            return Response({'error': 'Invalid quantity'}, status=status.HTTP_400_BAD_REQUEST)
+
         if customer.make_purchase(product, quantity):
             Purchase.objects.create(customer=customer, product=product, quantity=quantity)
             return Response({'message': 'Purchase successful'}, status=status.HTTP_201_CREATED)
         else:
-            return Response({'error': 'Insufficient balance'}, status=status.HTTP_400_BAD_REQUEST)
-
+            return Response({'error': 'Insufficient balance or quantity not available'}, status=status.HTTP_400_BAD_REQUEST)
+      
 def home(request):
     return render(request, 'index.html', {})
-
-
-
-
-

@@ -12,41 +12,101 @@
             padding: 0;
             background-color: #f5f5f5;
         }
+        
         .container {
             max-width: 800px;
             margin: 50px auto;
             text-align: center;
         }
+        
         h1 {
             color: #333;
+            margin-bottom: 20px;
         }
+        
+        .buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
         button {
             margin: 10px;
-            padding: 10px 20px;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: transform 0.3s, box-shadow 0.3s;
+            outline: none;
+            text-decoration: none; /* Remove underline */
+            color: inherit; /* Inherit color from parent */
+            background-color: transparent; /* Transparent background */
+        }
+        
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .primary {
             background-color: #007bff;
             color: #fff;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            text-decoration: none;
-            font-size: 16px;
-            transition: background-color 0.3s;
         }
-        button:hover {
+        
+        .secondary {
+            background-color: #6c757d;
+            color: #fff;
+        }
+        
+        .swagger {
+            background-color: #28a745;
+            color: #fff;
+        }
+        
+        .primary:hover {
             background-color: #0056b3;
+        }
+        
+        .secondary:hover {
+            background-color: #5a6268;
+        }
+        
+        .swagger:hover {
+            background-color: #218838;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Switch Views</h1>
-        <button><a href="{% url 'admin-list-create' %}" style="text-decoration: none; color: #fff;">Admins</a></button>
-        <button><a href="{% url 'category-list-create' %}" style="text-decoration: none; color: #fff;">Categories</a></button>
-        <button><a href="{% url 'customer-list-create' %}" style="text-decoration: none; color: #fff;">Customers</a></button>
-        <button><a href="{% url 'product-list-create' %}" style="text-decoration: none; color: #fff;">Products</a></button>
-        <button><a href="{% url 'shopcard-list-create' %}" style="text-decoration: none; color: #fff;">ShopCards</a></button>
-        <button><a href="{% url 'items-list-create' %}" style="text-decoration: none; color: #fff;">Items</a></button>
-        <button style="background-color:#62a03f;"><a href="{% url 'schema-swagger-ui' %}" style="text-decoration: none; color: #fff;">Swagger</a></button>
+        <div class="buttons">
+            <button class="primary" onclick="window.location.href='{% url 'admin-list-create' %}'">Admins</button>
+            <button class="secondary" onclick="window.location.href='{% url 'admin-retrieve-update-destroy' pk=1 %}'">Admin Details</button>
+            <button class="primary" onclick="window.location.href='{% url 'category-list-create' %}'">Categories</button>
+            <button class="secondary" onclick="window.location.href='{% url 'category-retrieve-update-destroy' pk=1 %}'">Category Details</button>
+            <button class="primary" onclick="window.location.href='{% url 'customer-list-create' %}'">Customers</button>
+            <button class="secondary" onclick="window.location.href='{% url 'customer-retrieve-update-destroy' pk=1 %}'">Customer Details</button>
+            <button class="primary" onclick="window.location.href='{% url 'product-list-create' %}'">Products</button>
+            <button class="secondary" onclick="window.location.href='{% url 'product-retrieve-update-destroy' pk=1 %}'">Product Details</button>
+            <button class="primary" onclick="window.location.href='{% url 'purchase-create' %}'">Purchase</button>
+            <button class="secondary" onclick="window.location.href='{% url 'purchase-history' customer_id=1 %}'">Purchase History</button>
+            <button class="primary" onclick="window.location.href='{% url 'shopcard-list-create' %}'">ShopCards</button>
+            <button class="secondary" onclick="window.location.href='{% url 'shopcard-retrieve-update-destroy' pk=1 %}'">ShopCard Details</button>
+            <button class="primary" onclick="window.location.href='{% url 'item-list-create' %}'">Items</button>
+            <button class="secondary" onclick="window.location.href='{% url 'item-retrieve-update-destroy' pk=1 %}'">Item Details</button>
+            <button class="primary" onclick="window.location.href='{% url 'check-total-purchase' customer_id=1 %}'">Check Total Purchase</button>
+            <button class="secondary" onclick="window.location.href='{% url 'total-products' %}'">Total Products</button>
+            <button class="primary" onclick="window.location.href='{% url 'expired-products' %}'">Expired Products</button>
+            <button class="secondary" onclick="window.location.href='{% url 'most-sold-product' %}'">Most Sold Product</button>
+            <form action="{% url 'optional-user-request' %}" method="post">
+                {% csrf_token %}
+                <button type="submit" class="primary">
+                    Optional User Request
+                </button>
+            </form>
+            <button class="swagger" onclick="window.location.href='{% url 'schema-swagger-ui' %}'">Swagger</button>
+        </div>
     </div>
 </body>
 </html>
