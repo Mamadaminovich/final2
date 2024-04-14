@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Switch Views</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -67,6 +68,11 @@
         .primary:hover {
             background-color: #0056b3;
         }
+
+        .red {
+            background-color: red;
+            color: #fff;
+        }
         
         .secondary:hover {
             background-color: #5a6268;
@@ -75,10 +81,19 @@
         .swagger:hover {
             background-color: #218838;
         }
+        /* Style for login button */
+        .login-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
+        <button class="login-button red" onclick="window.location.href='{% url 'user_login' %}'" type="button">
+            <i class="fas fa-sign-in-alt red"></i> Login
+        </button>
         <h1>Switch Views</h1>
         <div class="buttons">
             <button class="primary" onclick="window.location.href='{% url 'admin-list-create' %}'">Admins</button>
@@ -100,8 +115,8 @@
             <button class="primary" onclick="window.location.href='{% url 'expired-products' %}'">Expired Products</button>
             <button class="secondary" onclick="window.location.href='{% url 'most-sold-product' %}'">Most Sold Product</button>
             <button class="swagger" onclick="window.location.href='{% url 'schema-swagger-ui' %}'">Swagger</button>
+            <button onclick="window.location.href='{% url 'purchase_page' %}'" class="swagger">Purchase</button>
             <button id="purchaseButton" class="swagger">Buy Item</button>
-
         </div>
     </div>
     <script>

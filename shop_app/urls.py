@@ -15,7 +15,7 @@ urlpatterns = [
     path('products/', ProductListCreateAPIView.as_view(), name='product-list-create'),
     path('products/<int:pk>/', ProductRetrieveUpdateDestroyAPIView.as_view(), name='product-retrieve-update-destroy'),
     path('purchase/', PurchaseView.as_view(), name='purchase-create'),
-    
+    path('purchase-page/', purchase_page, name='purchase_page'),
     path('purchase/customer/<int:customer_id>/', PurchaseHistoryAPIView.as_view(), name='purchase-history'),
     path('shopcards/', ShopCardListCreateAPIView.as_view(), name='shopcard-list-create'),  # Corrected pattern name
     path('shopcards/<int:pk>/', ShopCardRetrieveUpdateDestroyAPIView.as_view(), name='shopcard-retrieve-update-destroy'),  # Corrected pattern name
@@ -26,4 +26,8 @@ urlpatterns = [
     path('expired-products/', ExpiredProducts.as_view(), name='expired-products'),
     path('make-purchase/', make_purchase, name='make-purchase'),
     path('most-sold-product/', MostSoldProduct.as_view(), name='most-sold-product'),
+    path('register/', register, name='register'),
+    path('user-login/', user_login, name='user_login'),
+    path('logout/', user_logout, name='logout'),
+    path('update-ads-preference/', update_receive_ads_preference, name='update_ads_preference'),
 ]

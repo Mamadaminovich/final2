@@ -1,8 +1,8 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from rest_framework import generics
 from .models import *
 from .serializers import *
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.db.models import Sum, Count
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -12,70 +12,13 @@ from rest_framework.decorators import api_view, permission_classes
 from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import ValidationError
 from .permissions import IsAuthenticatedAndAdminOrReadOnly
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate, login, logout
+from django.http import HttpResponseRedirect
+from django.urls import reverse
 
-
-class ModelListCreateAPIView(generics.ListCreateAPIView):
-    permission_classes = [IsAuthenticatedAndAdminOrReadOnly]
-    serializer_class = None
-    queryset = None
-
-class ModelRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsAuthenticatedAndAdminOrReadOnly]
-    serializer_class = None
-    queryset = None
-
-class AdminListCreateAPIView(generics.ListCreateAPIView):
-    queryset = Admin.objects.all()
-    serializer_class = AdminSerializer
-    permission_classes = [IsAuthenticatedAndAdminOrReadOnly]
-
-class AdminRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Admin.objects.all()
-    serializer_class = AdminSerializer
-    permission_classes = [IsAuthenticatedAndAdminOrReadOnly]
-
-class CategoryListCreateAPIView(generics.ListCreateAPIView):
-    queryset = Category.objects.all()
-    serializer_class = CategorySerializer
-
-class CategoryRetrieveUpdateDestroyAPIView(ModelRetrieveUpdateDestroyAPIView):
-    serializer_class = CategorySerializer
-    queryset = Category.objects.all()
-
-class CustomerListCreateAPIView(generics.ListCreateAPIView):
-    queryset = Customer.objects.all()
-    serializer_class = CustomerSerializer
-
-class CustomerRetrieveUpdateDestroyAPIView(ModelRetrieveUpdateDestroyAPIView):
-    serializer_class = CustomerSerializer
-    queryset = Customer.objects.all()
-
-class ProductListCreateAPIView(ModelListCreateAPIView):
-    serializer_class = ProductSerializer
-    queryset = Product.objects.all()
-
-class ProductRetrieveUpdateDestroyAPIView(ModelRetrieveUpdateDestroyAPIView):
-    serializer_class = ProductSerializer
-    queryset = Product.objects.all()
-
-class ItemsListCreateAPIView(generics.ListCreateAPIView):
-    queryset = Item.objects.all()
-    serializer_class = ItemSerializer
-
-class ItemsRetrieveUpdateDestroyAPIView(ModelRetrieveUpdateDestroyAPIView):
-    serializer_class = ItemSerializer
-    queryset = Item.objects.all()
-
-class ShopCardListCreateAPIView(generics.ListCreateAPIView):
-    queryset = ShopCard.objects.all()
-    serializer_class = ShopCardSerializer
-    permission_classes = [IsAuthenticatedAndAdminOrReadOnly]
-
-class ShopCardRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = ShopCard.objects.all()
-    serializer_class = ShopCardSerializer
-    permission_classes = [IsAuthenticatedAndAdminOrReadOnly]
-
+def home(request):
+    return render(request, 'index.html', {})
 
 class ModelListCreateAPIView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticatedAndAdminOrReadOnly]
@@ -138,6 +81,73 @@ class ShopCardRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView
     queryset = ShopCard.objects.all()
     serializer_class = ShopCardSerializer
     permission_classes = [IsAuthenticatedAndAdminOrReadOnly]
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
+def register(request):
+    if request.method == 'POST':
+        username = request.data.get('username')
+        password = request.data.get('password')
+        email = request.data.get('email')
+        hobbies = request.data.get('hobbies')
+        birth_year = request.data.get('birth_year')
+        receive_ads = request.data.get('receive_ads', False)
+
+        if not username or not password or not email:
+            return Response({'error': 'Username, password, and email are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if User.objects.filter(username=username).exists():
+            return Response({'error': 'Username already exists'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if isinstance(receive_ads, str):
+            receive_ads = receive_ads.lower() == "true"
+
+        user = User.objects.create_user(username=username, password=password, email=email)
+        profile = Profile.objects.create(user=user, hobbies=hobbies, birth_year=birth_year, receive_ads=receive_ads)
+
+        return redirect('user_login')
+    else:
+        return render(request, 'register.html')
+
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
+def user_login(request):
+    if request.method == 'POST':
+        username = request.data.get('username')
+        password = request.data.get('password')
+
+        if not username or not password:
+            return Response({'error': 'Username and password are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = authenticate(username=username, password=password)
+
+        if user is None:
+            return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        login(request, user)
+        return redirect('/')  # Redirect to the home page
+
+    return render(request, 'login.html')
+
+@api_view(['PATCH'])
+def update_receive_ads_preference(request):
+    user = request.user
+    receive_ads = request.data.get('receive_ads', False)
+
+    if user.is_anonymous:
+        return Response({'error': 'User not authenticated'}, status=status.HTTP_401_UNAUTHORIZED)
+    try:
+        profile = user.profile
+        profile.receive_ads = receive_ads
+        profile.save()
+        return Response({'message': 'Receive ads preference updated successfully'}, status=status.HTTP_200_OK)
+    except Profile.DoesNotExist:
+        return Response({'error': 'Profile does not exist'}, status=status.HTTP_404_NOT_FOUND)
+    
+def user_logout(request):
+    logout(request)
+    return redirect('home')
 
 @api_view(['POST'])
 def add_to_cart(request):
@@ -235,8 +245,6 @@ class PurchaseView(APIView):
         else:
             return Response({'error': 'Insufficient balance or quantity not available'}, status=status.HTTP_400_BAD_REQUEST)     
         
-def home(request):
-    return render(request, 'index.html', {})
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -272,6 +280,13 @@ def make_purchase(request):
         return Response({'message': 'Purchase successful'}, status=status.HTTP_201_CREATED)
     else:
         return Response({'error': 'Insufficient balance or quantity not available'}, status=status.HTTP_400_BAD_REQUEST)
+
+def purchase_page(request, customer_id):
+    customer = Customer.objects.get(pk=customer_id)
+    context = {
+        'customer': customer,
+    }
+    return render(request, 'a.html', context)
 
 class PurchaseHistoryAPIView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]

@@ -2,6 +2,7 @@ from django.db import models
 from django.db import transaction
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.contrib.auth.models import User
 
 class Admin(models.Model):
     name = models.CharField(max_length=100)
@@ -75,7 +76,15 @@ class Item(models.Model):
 
     def __str__(self):
         return str(self.product)
+    
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    hobbies = models.CharField(max_length=100, blank=True)
+    birth_year = models.IntegerField(null=True, blank=True)
+    receive_ads = models.BooleanField(default=False)
 
+    def __str__(self):
+        return self.user.username
     
 @receiver(post_save, sender=Purchase)
 def update_product_quantity(sender, instance, created, **kwargs):
@@ -90,3 +99,4 @@ def update_shop_card_balance(sender, instance, created, **kwargs):
             total_cost = instance.product.price * instance.quantity
             instance.shop_card.customer.balance -= total_cost
             instance.shop_card.customer.save()
+            

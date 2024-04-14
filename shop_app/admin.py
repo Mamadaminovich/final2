@@ -46,6 +46,8 @@ class ShopCardAdmin(admin.ModelAdmin):
     list_display = ('customer', 'created_at') 
     search_fields = ('customer__name',)
     list_filter = ('customer',)
+    
+admin.site.register(Profile)
 
 
     

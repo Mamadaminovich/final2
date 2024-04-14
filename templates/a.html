@@ -1,4 +1,4 @@
-{% load static %}
+{% comment %} {% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -146,6 +146,106 @@
         <button class="most-sold-product"><a href="{% url 'most-sold-product' %}">Most Sold Product</a></button>
         <button class="optional-user-request"><a href="{% url 'optional-user-request' %}">Optional User Request</a></button>
         <button class="swagger"><a href="{% url 'schema-swagger-ui' %}">Swagger</a></button>
+    </div>
+</body>
+</html> {% endcomment %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Purchase Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 50px auto;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        .selection-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        
+        .selection-box {
+            flex: 1;
+            margin: 0 10px;
+        }
+        
+        h2 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+            height: 200px;
+            overflow-y: auto;
+        }
+        
+        button {
+            margin: 10px;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: transform 0.3s, box-shadow 0.3s;
+            outline: none;
+            text-decoration: none;
+            color: #fff;
+            background-color: #007bff;
+        }
+        
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Select Customers and Products</h1>
+        <div class="selection-container">
+            <div class="selection-box">
+                <h2>Customers</h2>
+                <select id="customerSelect" multiple size="5">
+                    <!-- Populate options dynamically using Django template -->
+                    {% for customer in customers %}
+                        <option value="{{ customer.id }}">{{ customer.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="selection-box">
+                <h2>Products</h2>
+                <select id="productSelect" multiple size="5">
+                    <!-- Populate options dynamically using Django template -->
+                    {% for product in products %}
+                        <option value="{{ product.id }}">{{ product.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <button id="confirmSelection" class="primary">Confirm Selection</button>
     </div>
 </body>
 </html>
