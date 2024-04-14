@@ -2,6 +2,7 @@ from django.db import models
 from django.db import transaction
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+
 class Admin(models.Model):
     name = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
@@ -28,7 +29,7 @@ class Customer(models.Model):
             product.update_quantity(quantity)
             return True
         else:
-            return False
+            return "Not enough balance to make the purchase."
 
 class Product(models.Model):
     name = models.CharField(max_length=100)
@@ -39,7 +40,9 @@ class Product(models.Model):
     def update_quantity(self, quantity):
         self.quantity -= quantity
         self.save()
-
+        if self.quantity <= 0:
+            self.delete()
+            
 class Purchase(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
@@ -55,7 +58,7 @@ class Purchase(models.Model):
             return False
 
 class ShopCard(models.Model):
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
+    customer = models.OneToOneField(Customer, on_delete=models.CASCADE, related_name='shop_card')
     created_at = models.DateTimeField(auto_now_add=True)
         
     def __str__(self) -> str:
@@ -72,9 +75,18 @@ class Item(models.Model):
 
     def __str__(self):
         return str(self.product)
+
     
 @receiver(post_save, sender=Purchase)
 def update_product_quantity(sender, instance, created, **kwargs):
     if created:
         with transaction.atomic():
             instance.product.update_quantity(instance.quantity)
+            
+@receiver(post_save, sender=Item)
+def update_shop_card_balance(sender, instance, created, **kwargs):
+    if created:
+        with transaction.atomic():
+            total_cost = instance.product.price * instance.quantity
+            instance.shop_card.customer.balance -= total_cost
+            instance.shop_card.customer.save()

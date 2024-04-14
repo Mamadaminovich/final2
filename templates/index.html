@@ -90,7 +90,7 @@
             <button class="primary" onclick="window.location.href='{% url 'product-list-create' %}'">Products</button>
             <button class="secondary" onclick="window.location.href='{% url 'product-retrieve-update-destroy' pk=1 %}'">Product Details</button>
             <button class="primary" onclick="window.location.href='{% url 'purchase-create' %}'">Purchase</button>
-            <button class="secondary" onclick="window.location.href='{% url 'purchase-history' customer_id=1 %}'">Purchase History</button>
+            <button class="primary" onclick="window.location.href='{% url 'purchase-history' customer_id=1 %}'">Purchase History</button>
             <button class="primary" onclick="window.location.href='{% url 'shopcard-list-create' %}'">ShopCards</button>
             <button class="secondary" onclick="window.location.href='{% url 'shopcard-retrieve-update-destroy' pk=1 %}'">ShopCard Details</button>
             <button class="primary" onclick="window.location.href='{% url 'item-list-create' %}'">Items</button>
@@ -99,14 +99,40 @@
             <button class="secondary" onclick="window.location.href='{% url 'total-products' %}'">Total Products</button>
             <button class="primary" onclick="window.location.href='{% url 'expired-products' %}'">Expired Products</button>
             <button class="secondary" onclick="window.location.href='{% url 'most-sold-product' %}'">Most Sold Product</button>
-            <form action="{% url 'optional-user-request' %}" method="post">
-                {% csrf_token %}
-                <button type="submit" class="primary">
-                    Optional User Request
-                </button>
-            </form>
             <button class="swagger" onclick="window.location.href='{% url 'schema-swagger-ui' %}'">Swagger</button>
+            <button id="purchaseButton" class="swagger">Buy Item</button>
+
         </div>
     </div>
+    <script>
+        document.getElementById('purchaseButton').addEventListener('click', function() {
+            var customer_id = 3; // Replace with the actual customer ID
+            var product_id = 6; // Replace with the actual product ID
+            var quantity = 1; // Replace with the desired quantity
+    
+            fetch('/make-purchase/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}' // Include CSRF token for Django POST requests
+                },
+                body: JSON.stringify({
+                    customer_id: customer_id,
+                    product_id: product_id,
+                    quantity: quantity
+                })
+            })
+            .then(response => {
+                if (response.ok) {
+                    alert('Purchase successful!');
+                } else {
+                    alert('Failed to make the purchase. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+    </script>
 </body>
 </html>

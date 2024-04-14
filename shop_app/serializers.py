@@ -16,19 +16,30 @@ class CustomerSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class ProductSerializer(serializers.ModelSerializer):
-    category = CategorySerializer()  # Nested serializer for Category
+    category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all())
 
     class Meta:
         model = Product
         fields = '__all__'
+
+    def create(self, validated_data):
+        return Product.objects.create(**validated_data)
         
 class ItemSerializer(serializers.ModelSerializer):
-    product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all())
-    
+    product_name = serializers.SerializerMethodField()  # Add this field to store product name
+
     class Meta:
         model = Item
         fields = '__all__'
-    
+
+    def get_product_name(self, instance):
+        return instance.product.name  # Retrieve the product's name from the related Product object
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['product'] = representation.pop('product_name')  # Replace 'product' field with 'product_name'
+        return representation
+
     def validate_quantity(self, value):
         if value <= 0:
             raise serializers.ValidationError("Quantity must be a positive integer")
@@ -36,10 +47,19 @@ class ItemSerializer(serializers.ModelSerializer):
     
 class ShopCardSerializer(serializers.ModelSerializer):
     items = ItemSerializer(many=True, required=False)
+    customer_name = serializers.SerializerMethodField()
 
     class Meta:
         model = ShopCard
         fields = '__all__'
+
+    def get_customer_name(self, instance):
+        return instance.customer.name 
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['customer'] = representation.pop('customer_name')
+        return representation
 
     def update(self, instance, validated_data):
         items_data = validated_data.pop('items', [])
