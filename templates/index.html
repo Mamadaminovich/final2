@@ -91,6 +91,7 @@
 </head>
 <body>
     <div class="container">
+        {% csrf_token %}
         <button class="login-button red" onclick="window.location.href='{% url 'user_login' %}'" type="button">
             <i class="fas fa-sign-in-alt red"></i> Login
         </button>
@@ -115,14 +116,17 @@
             <button class="primary" onclick="window.location.href='{% url 'expired-products' %}'">Expired Products</button>
             <button class="secondary" onclick="window.location.href='{% url 'most-sold-product' %}'">Most Sold Product</button>
             <button class="swagger" onclick="window.location.href='{% url 'schema-swagger-ui' %}'">Swagger</button>
-            <button onclick="window.location.href='{% url 'purchase_page' %}'" class="swagger">Purchase</button>
-            <button id="purchaseButton" class="swagger">Buy Item</button>
+            <button onclick="window.location.href='{% url 'make_purchase' %}'" class="swagger">Purchase</button>
+            <form action="{% url 'purchase_page' %}" method="post">
+                {% csrf_token %}
+                <button type="submit" class="swagger">Buy Item</button>
+            </form>
         </div>
     </div>
     <script>
         document.getElementById('purchaseButton').addEventListener('click', function() {
-            var customer_id = 3; // Replace with the actual customer ID
-            var product_id = 6; // Replace with the actual product ID
+            var customer_id = 2; // Replace with the actual customer ID
+            var product_id = 1; // Replace with the actual product ID
             var quantity = 1; // Replace with the desired quantity
     
             fetch('/make-purchase/', {

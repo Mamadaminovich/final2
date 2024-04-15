@@ -261,8 +261,11 @@ class CheckTotalPurchase(APIView):
             return Response({'message': 'Total purchase exceeds $10000'}, status=status.HTTP_200_OK)
         else:
             return Response({'message': 'Total purchase does not exceed $10000'}, status=status.HTTP_400_BAD_REQUEST)
+@api_view(['GET','POST'])       
+def purchase_page(request):
+    return render(request, 'a.html')
 
-@api_view(['POST'])
+@api_view(['GET','POST'])  
 @permission_classes([IsAuthenticated])
 def make_purchase(request):
     customer_id = request.data.get('customer_id')
@@ -280,13 +283,6 @@ def make_purchase(request):
         return Response({'message': 'Purchase successful'}, status=status.HTTP_201_CREATED)
     else:
         return Response({'error': 'Insufficient balance or quantity not available'}, status=status.HTTP_400_BAD_REQUEST)
-
-def purchase_page(request, customer_id):
-    customer = Customer.objects.get(pk=customer_id)
-    context = {
-        'customer': customer,
-    }
-    return render(request, 'a.html', context)
 
 class PurchaseHistoryAPIView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
