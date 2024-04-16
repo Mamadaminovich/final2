@@ -1,21 +1,21 @@
 from django.shortcuts import render, redirect
-from rest_framework import generics
 from .models import *
 from .serializers import *
-from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.db.models import Sum, Count
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
-from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
-from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import ValidationError
 from .permissions import IsAuthenticatedAndAdminOrReadOnly
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
-from django.http import HttpResponseRedirect, JsonResponse
-
+from django.http import HttpResponseRedirect, JsonResponse, HttpResponse
+from django.shortcuts import render, redirect, get_object_or_404
+from django.utils import timezone
+from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly
+from rest_framework import generics, status
+from django.views.decorators.csrf import csrf_exempt
+import openpyxl
 def home(request):
     return render(request, 'index.html', {})
 
@@ -145,26 +145,32 @@ def user_logout(request):
     logout(request)
     return redirect('home')
 
-@api_view(['POST'])
-def add_to_cart(request):
-    customer_id = request.data.get('customer_id')
-    product_id = request.data.get('product_id')
-    quantity = request.data.get('quantity')
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def add_to_cart(request):
+#     customer = request.user.customer
+#     products = request.data.get('products', [])  # Assuming products are sent in the request data
 
-    customer = get_object_or_404(Customer, pk=customer_id)
-    product = get_object_or_404(Product, pk=product_id)
+#     items = []
+#     for product_data in products:
+#         product_id = product_data.get('id')
+#         quantity = product_data.get('quantity', 1)  # Default quantity is 1 if not specified
 
-    try:
-        quantity = int(quantity)
-        if quantity <= 0:
-            raise ValueError("Quantity must be a positive integer")
-    except (TypeError, ValueError):
-        return Response({'error': 'Invalid quantity'}, status=status.HTTP_400_BAD_REQUEST)
+#         try:
+#             product = Product.objects.get(pk=product_id)
+#         except Product.DoesNotExist:
+#             return Response({'error': f'Product with id {product_id} does not exist'}, status=status.HTTP_404_NOT_FOUND)
 
-    shop_cart, created = ShopCard.objects.get_or_create(customer=customer)
-    Item.objects.create(product=product, quantity=quantity, shop_card=shop_cart)
-    
-    return Response({'message': 'Item added to cart successfully'}, status=status.HTTP_200_OK)
+#         # Create or update the item in the cart
+#         item, created = Item.objects.get_or_create(customer=customer, product=product, purchase=None)
+#         if not created:
+#             item.quantity += quantity
+#             item.save()
+
+#         items.append(item)
+
+#     serializer = ItemSerializer(items, many=True)
+#     return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -181,18 +187,7 @@ def check_total_purchase(request, customer_id):
         return Response({'message': 'Total purchase exceeds $10000'}, status=status.HTTP_200_OK)
     else:
         return Response({'message': 'Total purchase does not exceed $10000'}, status=status.HTTP_400_BAD_REQUEST)
-    
-class PurchaseHistoryAPIView(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
-    serializer_class = PurchaseSerializer
 
-    def get_queryset(self):
-        customer_id = self.kwargs['customer_id']
-        return Purchase.objects.filter(customer_id=customer_id)
-    
-    def get(self, request, *args, **kwargs):
-        return self.list(request, *args, **kwargs)
-         
 class TotalProducts(APIView):
     def get(self, request):
         total_products = Product.objects.count()
@@ -207,32 +202,78 @@ class ExpiredProducts(APIView):
     
 class MostSoldProduct(APIView):
     def get(self, request):
-        most_sold_product = Product.objects.annotate(total_sales=Count('purchase')).order_by('-total_sales').first()
-        if most_sold_product:
-            serialized_product = ProductSerializer(most_sold_product)
-            return Response(serialized_product.data, status=status.HTTP_200_OK)
-        else:
-            return Response({'message': 'No product found'}, status=status.HTTP_404_NOT_FOUND)
+        products_with_sales = Product.objects.annotate(total_sales=Count('purchase__id'))
+        products_ordered = products_with_sales.order_by('-total_sales')
+
+        if not products_ordered.exists():
+            return Response({'message': 'No products found'}, status=status.HTTP_404_NOT_FOUND)
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+
+        ws.append(['Name', 'Price', 'Quantity', 'Total Sales'])
+
+        for product in products_ordered:
+            ws.append([product.name, product.price, product.quantity, product.total_sales])
+
+        from io import BytesIO
+        excel_file = BytesIO()
+        wb.save(excel_file)
+        excel_file.seek(0)
+
+        response = HttpResponse(excel_file, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename=products.xlsx'
+
+        return response
         
-@api_view(['GET','POST'])  
-@permission_classes([IsAuthenticated])
+# @api_view(['GET','POST'])  
+# @permission_classes([IsAuthenticated])
+@csrf_exempt
 def make_purchase(request):
-    customer_id = request.data.get('customer_id')
-    product_id = request.data.get('product_id')
-    quantity = request.data.get('quantity')
+    if request.method == 'POST':
+        customer_id = request.POST.get('customer_id')
+        product_id = request.POST.get('product_id')
+        quantity = request.POST.get('quantity')
 
-    customer = get_object_or_404(Customer, pk=customer_id)
-    product = get_object_or_404(Product, pk=product_id)
+        try:
+            customer = Customer.objects.get(id=customer_id)
+            product = Product.objects.get(id=product_id)
+        except (Customer.DoesNotExist, Product.DoesNotExist):
+            return JsonResponse({'error': 'Customer or product not found'}, status=404)
 
-    if quantity <= 0:
-        return Response({'error': 'Invalid quantity'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            quantity = int(quantity)
+            if quantity <= 0:
+                raise ValueError("Quantity must be a positive integer")
+        except ValueError:
+            return JsonResponse({'error': 'Invalid quantity'}, status=400)
 
-    if customer.make_purchase(product, quantity):
-        Purchase.objects.create(customer=customer, product=product, quantity=quantity)
-        return Response({'message': 'Purchase successful'}, status=status.HTTP_201_CREATED)
-    else:
-        return Response({'error': 'Insufficient balance or quantity not available'}, status=status.HTTP_400_BAD_REQUEST)
+        if customer.balance < product.price * quantity:
+            return JsonResponse({'error': 'Insufficient balance'}, status=400)
+
+        try:
+            Purchase.objects.create(customer=customer, product=product, quantity=quantity)
+            customer.balance -= product.price * quantity
+            customer.save()
+            return JsonResponse({'message': 'Purchase successful'}, status=201)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
+    customers = Customer.objects.all()
+    products = Product.objects.all()
+    return render(request, 'purchase.html', {'customers': customers, 'products': products})
+
+class PurchaseHistoryAPIView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = PurchaseSerializer
+
+    def get_queryset(self):
+        customer_id = self.kwargs['customer_id']
+        return Purchase.objects.filter(customer_id=customer_id)
     
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
+
 class PurchaseView(APIView):
     def post(self, request):
         customer_id = int(request.data.get('customer_id'))  # Convert to integer
@@ -262,6 +303,8 @@ class CheckTotalPurchase(APIView):
         else:
             return Response({'message': 'Total purchase does not exceed $10000'}, status=status.HTTP_400_BAD_REQUEST)
         
-@api_view(['GET','POST'])       
 def purchase_page(request):
-    return render(request, 'a.html')
+    customers = Customer.objects.all()
+    products = Product.objects.all()
+    return render(request, 'buy.html', {'customers': customers, 'products': products})
+

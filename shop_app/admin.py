@@ -35,12 +35,6 @@ class PurchaseAdmin(admin.ModelAdmin):
     search_fields = ('customer__name', 'product__name')
     list_filter = ('customer', 'product')
 
-@admin.register(Item)
-class ItemAdmin(admin.ModelAdmin):
-    list_display = ('product', 'quantity', 'shop_card') 
-    search_fields = ('product__name', 'shop_card__customer__name')
-    list_filter = ('shop_card__customer',)
-
 @admin.register(ShopCard)
 class ShopCardAdmin(admin.ModelAdmin):
     list_display = ('customer', 'created_at') 
@@ -48,6 +42,6 @@ class ShopCardAdmin(admin.ModelAdmin):
     list_filter = ('customer',)
     
 admin.site.register(Profile)
-
+admin.site.register(Item)
 
     

@@ -66,16 +66,13 @@ class ShopCard(models.Model):
         return str(self.customer)
     
 class Item(models.Model):
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='items')
+    purchase = models.ForeignKey(Purchase, on_delete=models.CASCADE, related_name='items')
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
-    quantity = models.IntegerField()
-    shop_card = models.ForeignKey(ShopCard, on_delete=models.CASCADE)
-
-    class Meta:
-        db_table = 'shop_app_item'
-        unique_together = ('product', 'shop_card')
+    quantity = models.IntegerField(default=1)
 
     def __str__(self):
-        return str(self.product)
+        return f"{self.quantity} of {self.product.name} in {self.purchase}"
     
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
@@ -99,4 +96,4 @@ def update_shop_card_balance(sender, instance, created, **kwargs):
             total_cost = instance.product.price * instance.quantity
             instance.shop_card.customer.balance -= total_cost
             instance.shop_card.customer.save()
-            #ggggg
+            
