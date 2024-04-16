@@ -91,7 +91,6 @@
 </head>
 <body>
     <div class="container">
-        {% csrf_token %}
         <button class="login-button red" onclick="window.location.href='{% url 'user_login' %}'" type="button">
             <i class="fas fa-sign-in-alt red"></i> Login
         </button>
@@ -117,6 +116,15 @@
             <button class="secondary" onclick="window.location.href='{% url 'most-sold-product' %}'">Most Sold Product</button>
             <button class="swagger" onclick="window.location.href='{% url 'schema-swagger-ui' %}'">Swagger</button>
             <button onclick="window.location.href='{% url 'make_purchase' %}'" class="swagger">Purchase</button>
+            
+            <!-- Add to Cart Form -->
+            <form action="{% url 'add_to_cart' %}" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="customer_id" value="5">
+                <button type="submit" class="primary">Add to Cart</button>
+            </form>
+            
+            <!-- Purchase Page Form -->
             <form action="{% url 'purchase_page' %}" method="post">
                 {% csrf_token %}
                 <button type="submit" class="swagger">Buy Item</button>

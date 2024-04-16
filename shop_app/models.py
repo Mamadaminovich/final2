@@ -99,4 +99,4 @@ def update_shop_card_balance(sender, instance, created, **kwargs):
             total_cost = instance.product.price * instance.quantity
             instance.shop_card.customer.balance -= total_cost
             instance.shop_card.customer.save()
-            
+            #ggggg
