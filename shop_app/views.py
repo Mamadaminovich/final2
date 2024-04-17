@@ -16,6 +16,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticate
 from rest_framework import generics, status
 from django.views.decorators.csrf import csrf_exempt
 import openpyxl
+
 def home(request):
     return render(request, 'index.html', {})
 
@@ -30,12 +31,12 @@ class ModelRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = None
 
 class AdminListCreateAPIView(generics.ListCreateAPIView):
-    queryset = Admin.objects.all()
+    queryset = AdminUser.objects.all()
     serializer_class = AdminSerializer
     permission_classes = [IsAuthenticatedAndAdminOrReadOnly]
 
 class AdminRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Admin.objects.all()
+    queryset = AdminUser.objects.all()
     serializer_class = AdminSerializer
     permission_classes = [IsAuthenticatedAndAdminOrReadOnly]
 
@@ -64,22 +65,83 @@ class ProductRetrieveUpdateDestroyAPIView(ModelRetrieveUpdateDestroyAPIView):
     queryset = Product.objects.all()
 
 class ItemsListCreateAPIView(generics.ListCreateAPIView):
-    queryset = Item.objects.all()
+    queryset = BasketItem.objects.all()
     serializer_class = ItemSerializer
 
 class ItemsRetrieveUpdateDestroyAPIView(ModelRetrieveUpdateDestroyAPIView):
     serializer_class = ItemSerializer
-    queryset = Item.objects.all()
+    queryset = BasketItem.objects.all()
 
 class ShopCardListCreateAPIView(generics.ListCreateAPIView):
-    queryset = ShopCard.objects.all()
+    queryset = ShopCart.objects.all()
     serializer_class = ShopCardSerializer
     permission_classes = [IsAuthenticatedAndAdminOrReadOnly]
 
 class ShopCardRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = ShopCard.objects.all()
+    queryset = ShopCart.objects.all()
     serializer_class = ShopCardSerializer
     permission_classes = [IsAuthenticatedAndAdminOrReadOnly]
+    
+
+class BasketListCreateAPIView(generics.ListCreateAPIView):
+    queryset = Basket.objects.all()
+    serializer_class = BasketSerializer
+    permission_classes = [IsAuthenticatedAndAdminOrReadOnly]
+
+class BasketRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Basket.objects.all()
+    serializer_class = BasketSerializer
+    permission_classes = [IsAuthenticatedAndAdminOrReadOnly]
+
+class ProfileRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
+    queryset = Profile.objects.all()
+    serializer_class = ProfileSerializer
+    permission_classes = [IsAuthenticated]
+
+class BasketItemListCreateAPIView(generics.ListCreateAPIView):
+    queryset = BasketItem.objects.all()
+    serializer_class = BasketItemSerializer
+    permission_classes = [IsAuthenticatedAndAdminOrReadOnly]
+
+class BasketItemRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = BasketItem.objects.all()
+    serializer_class = BasketItemSerializer
+    permission_classes = [IsAuthenticatedAndAdminOrReadOnly]
+    
+#fffffffff
+
+class BasketPurchaseAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        basket_id = request.data.get('basket_id')
+        try:
+            basket = Basket.objects.get(id=basket_id)
+        except Basket.DoesNotExist:
+            return Response({'error': 'Basket not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        for item in basket.items.all():
+            if item.quantity > item.product.quantity:
+                return Response({'error': f'Quantity of {item.product.name} exceeds available stock'}, status=status.HTTP_400_BAD_REQUEST)
+
+        for item in basket.items.all():
+            item.product.quantity -= item.quantity
+            item.product.save()
+
+        basket.delete()
+        return Response({'message': 'Purchase successful'}, status=status.HTTP_201_CREATED)
+        
+class BasketTotalPrice(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, basket_id):
+        try:
+            basket = Basket.objects.get(id=basket_id)
+        except Basket.DoesNotExist:
+            return Response({'error': 'Basket not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        total_price = sum(item.product.price * item.quantity for item in basket.items.all())
+        return Response({'total_price': total_price}, status=status.HTTP_200_OK)
 
 @api_view(['GET', 'POST'])
 @permission_classes([AllowAny])
@@ -145,33 +207,6 @@ def user_logout(request):
     logout(request)
     return redirect('home')
 
-# @api_view(['POST'])
-# @permission_classes([IsAuthenticated])
-# def add_to_cart(request):
-#     customer = request.user.customer
-#     products = request.data.get('products', [])  # Assuming products are sent in the request data
-
-#     items = []
-#     for product_data in products:
-#         product_id = product_data.get('id')
-#         quantity = product_data.get('quantity', 1)  # Default quantity is 1 if not specified
-
-#         try:
-#             product = Product.objects.get(pk=product_id)
-#         except Product.DoesNotExist:
-#             return Response({'error': f'Product with id {product_id} does not exist'}, status=status.HTTP_404_NOT_FOUND)
-
-#         # Create or update the item in the cart
-#         item, created = Item.objects.get_or_create(customer=customer, product=product, purchase=None)
-#         if not created:
-#             item.quantity += quantity
-#             item.save()
-
-#         items.append(item)
-
-#     serializer = ItemSerializer(items, many=True)
-#     return Response(serializer.data, status=status.HTTP_201_CREATED)
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def purchase_history(request, customer_id):
@@ -199,7 +234,9 @@ class ExpiredProducts(APIView):
         expired_products = Product.objects.filter(purchase__purchase_date__lte=threshold_date)
         serialized_products = ProductSerializer(expired_products, many=True)
         return Response(serialized_products.data, status=status.HTTP_200_OK)
-    
+
+#ffffffff
+
 class MostSoldProduct(APIView):
     def get(self, request):
         products_with_sales = Product.objects.annotate(total_sales=Count('purchase__id'))

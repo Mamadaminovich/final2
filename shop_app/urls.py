@@ -4,6 +4,7 @@ from .views import *
 
 router = routers.DefaultRouter()
 
+
 urlpatterns = [
     path('', home, name='home'),
     path('admins/', AdminListCreateAPIView.as_view(), name='admin-list-create'),
@@ -16,7 +17,6 @@ urlpatterns = [
     path('products/<int:pk>/', ProductRetrieveUpdateDestroyAPIView.as_view(), name='product-retrieve-update-destroy'),
     path('purchase/', PurchaseView.as_view(), name='purchase-create'),
     path('purchase-page/', purchase_page, name='purchase_page'),
-    # path('add-to-cart/', add_to_cart, name='add_to_cart'),
     path('purchase-history', purchase_history, name='purchase_history'),
     path('purchase/customer/<int:customer_id>/', PurchaseHistoryAPIView.as_view(), name='purchase-history'),
     path('shopcards/', ShopCardListCreateAPIView.as_view(), name='shopcard-list-create'),

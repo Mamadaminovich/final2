@@ -1,15 +1,14 @@
 from django.db import models
-from django.db import transaction
+from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from django.contrib.auth.models import User
+from django.db import transaction
 
-class Admin(models.Model):
-    name = models.CharField(max_length=100)
-    email = models.EmailField(unique=True)
-    
-    def __str__(self) -> str:
-        return self.name
+class AdminUser(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.user.username
 
 class Category(models.Model):
     name = models.CharField(max_length=100)
@@ -58,22 +57,26 @@ class Purchase(models.Model):
         else:
             return False
 
-class ShopCard(models.Model):
-    customer = models.OneToOneField(Customer, on_delete=models.CASCADE, related_name='shop_card')
+class Basket(models.Model):
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    items = models.ManyToManyField(Product, through='BasketItem')
+
+    def add_to_basket(self, product, quantity):
+        BasketItem.objects.create(basket=self, product=product, quantity=quantity)
+
+class BasketItem(models.Model):
+    basket = models.ForeignKey(Basket, on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    quantity = models.IntegerField(default=1)
+
+class ShopCart(models.Model):
+    customer = models.OneToOneField(Customer, on_delete=models.CASCADE, related_name='shop_cart')
     created_at = models.DateTimeField(auto_now_add=True)
         
     def __str__(self) -> str:
         return str(self.customer)
-    
-class Item(models.Model):
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='items')
-    purchase = models.ForeignKey(Purchase, on_delete=models.CASCADE, related_name='items')
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
-    quantity = models.IntegerField(default=1)
 
-    def __str__(self):
-        return f"{self.quantity} of {self.product.name} in {self.purchase}"
-    
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     hobbies = models.CharField(max_length=100, blank=True)
@@ -89,11 +92,10 @@ def update_product_quantity(sender, instance, created, **kwargs):
         with transaction.atomic():
             instance.product.update_quantity(instance.quantity)
             
-@receiver(post_save, sender=Item)
-def update_shop_card_balance(sender, instance, created, **kwargs):
+@receiver(post_save, sender=BasketItem)
+def update_shop_cart_balance(sender, instance, created, **kwargs):
     if created:
         with transaction.atomic():
             total_cost = instance.product.price * instance.quantity
-            instance.shop_card.customer.balance -= total_cost
-            instance.shop_card.customer.save()
-            
+            instance.basket.customer.balance -= total_cost
+            instance.basket.customer.save()
