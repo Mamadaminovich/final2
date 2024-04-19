@@ -159,7 +159,7 @@ def purchase_history(request, customer_id):
 def check_total_purchase(request, customer_id):
     total_purchase = Purchase.objects.filter(customer_id=customer_id).aggregate(Sum('quantity'))['quantity__sum']
     if total_purchase and total_purchase > 10000:
-        return Response({'message': 'Total purchase exceeds $10000'}, status=status.HTTP_200_OK)
+        return Response({'message': ' HUUH Total purchase exceeds $10000!!!!!!'}, status=status.HTTP_200_OK)
     else:
         return Response({'message': 'Total purchase does not exceed $10000'}, status=status.HTTP_400_BAD_REQUEST)
 
