@@ -1,21 +1,21 @@
 from django.shortcuts import render, redirect
-from rest_framework import generics
 from .models import *
 from .serializers import *
-from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.db.models import Sum, Count
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
-from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
-from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import ValidationError
 from .permissions import IsAuthenticatedAndAdminOrReadOnly
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
-from django.http import HttpResponseRedirect
-from django.urls import reverse
+from django.http import HttpResponseRedirect, JsonResponse, HttpResponse
+from django.shortcuts import render, redirect, get_object_or_404
+from django.utils import timezone
+from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly
+from rest_framework import generics, status
+from django.views.decorators.csrf import csrf_exempt
+import openpyxl
 
 def home(request):
     return render(request, 'index.html', {})
@@ -31,12 +31,12 @@ class ModelRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = None
 
 class AdminListCreateAPIView(generics.ListCreateAPIView):
-    queryset = Admin.objects.all()
+    queryset = AdminUser.objects.all()
     serializer_class = AdminSerializer
     permission_classes = [IsAuthenticatedAndAdminOrReadOnly]
 
 class AdminRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Admin.objects.all()
+    queryset = AdminUser.objects.all()
     serializer_class = AdminSerializer
     permission_classes = [IsAuthenticatedAndAdminOrReadOnly]
 
@@ -65,22 +65,23 @@ class ProductRetrieveUpdateDestroyAPIView(ModelRetrieveUpdateDestroyAPIView):
     queryset = Product.objects.all()
 
 class ItemsListCreateAPIView(generics.ListCreateAPIView):
-    queryset = Item.objects.all()
+    queryset = BasketItem.objects.all()
     serializer_class = ItemSerializer
 
 class ItemsRetrieveUpdateDestroyAPIView(ModelRetrieveUpdateDestroyAPIView):
     serializer_class = ItemSerializer
-    queryset = Item.objects.all()
+    queryset = BasketItem.objects.all()
 
 class ShopCardListCreateAPIView(generics.ListCreateAPIView):
-    queryset = ShopCard.objects.all()
+    queryset = ShopCart.objects.all()
     serializer_class = ShopCardSerializer
     permission_classes = [IsAuthenticatedAndAdminOrReadOnly]
 
 class ShopCardRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = ShopCard.objects.all()
+    queryset = ShopCart.objects.all()
     serializer_class = ShopCardSerializer
     permission_classes = [IsAuthenticatedAndAdminOrReadOnly]
+    
 
 @api_view(['GET', 'POST'])
 @permission_classes([AllowAny])
@@ -114,13 +115,10 @@ def register(request):
         receive_ads = request.data.get('receive_ads', False)
 
         if not username or not password or not email:
-            return Response({'error': 'Username, password, and email are required'}, status=status.HTTP_400_BAD_REQUEST)
+            return JsonResponse({'error': 'Username, password, and email are required'}, status=400)
 
         if User.objects.filter(username=username).exists():
-            return Response({'error': 'Username already exists'}, status=status.HTTP_400_BAD_REQUEST)
-
-        if isinstance(receive_ads, str):
-            receive_ads = receive_ads.lower() == "true"
+            return JsonResponse({'error': 'Username already exists'}, status=400)
 
         user = User.objects.create_user(username=username, password=password, email=email)
         profile = Profile.objects.create(user=user, hobbies=hobbies, birth_year=birth_year, receive_ads=receive_ads)
@@ -135,39 +133,19 @@ def update_receive_ads_preference(request):
     receive_ads = request.data.get('receive_ads', False)
 
     if user.is_anonymous:
-        return Response({'error': 'User not authenticated'}, status=status.HTTP_401_UNAUTHORIZED)
+        return JsonResponse({'error': 'User not authenticated'}, status=401)
+
     try:
         profile = user.profile
         profile.receive_ads = receive_ads
         profile.save()
-        return Response({'message': 'Receive ads preference updated successfully'}, status=status.HTTP_200_OK)
+        return JsonResponse({'message': 'Receive ads preference updated successfully'}, status=200)
     except Profile.DoesNotExist:
         return Response({'error': 'Profile does not exist'}, status=status.HTTP_404_NOT_FOUND)
 
 def user_logout(request):
     logout(request)
     return redirect('home')
-
-@api_view(['POST'])
-def add_to_cart(request):
-    customer_id = request.data.get('customer_id')
-    product_id = request.data.get('product_id')
-    quantity = request.data.get('quantity')
-
-    customer = get_object_or_404(Customer, pk=customer_id)
-    product = get_object_or_404(Product, pk=product_id)
-
-    try:
-        quantity = int(quantity)
-        if quantity <= 0:
-            raise ValueError("Quantity must be a positive integer")
-    except (TypeError, ValueError):
-        return Response({'error': 'Invalid quantity'}, status=status.HTTP_400_BAD_REQUEST)
-
-    shop_cart, created = ShopCard.objects.get_or_create(customer=customer)
-    Item.objects.create(product=product, quantity=quantity, shop_card=shop_cart)
-    
-    return Response({'message': 'Item added to cart successfully'}, status=status.HTTP_200_OK)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
