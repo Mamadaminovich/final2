@@ -114,44 +114,12 @@
             <button class="primary" onclick="window.location.href='{% url 'check-total-purchase' customer_id=1 %}'">Check Total Purchase</button>
             <button class="secondary" onclick="window.location.href='{% url 'total-products' %}'">Total Products</button>
             <button class="primary" onclick="window.location.href='{% url 'expired-products' %}'">Expired Products</button>
-            <button class="secondary" onclick="window.location.href='{% url 'most-sold-product' %}'">Most Sold Product</button>
+            <button class="secondary" onclick="window.location.href='{% url 'total-products' %}'">Total Products</button>
+            <button class="primary" onclick="window.location.href='{% url 'add_to_basket' %}'">add to basket</button>
+            <button class="secondary" onclick="window.location.href='{% url 'remove_from_basket' %}'">remove_from_basket</button>
             <button class="swagger" onclick="window.location.href='{% url 'schema-swagger-ui' %}'">Swagger</button>
             <button onclick="window.location.href='{% url 'make_purchase' %}'" class="swagger">Purchase</button>
-            <form action="{% url 'purchase_page' %}" method="post">
-                {% csrf_token %}
-                <button type="submit" class="swagger">Buy Item</button>
-            </form>
         </div>
     </div>
-    <script>
-        document.getElementById('purchaseButton').addEventListener('click', function() {
-            var customer_id = 2; // Replace with the actual customer ID
-            var product_id = 1; // Replace with the actual product ID
-            var quantity = 1; // Replace with the desired quantity
-    
-            fetch('/make-purchase/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token }}' // Include CSRF token for Django POST requests
-                },
-                body: JSON.stringify({
-                    customer_id: customer_id,
-                    product_id: product_id,
-                    quantity: quantity
-                })
-            })
-            .then(response => {
-                if (response.ok) {
-                    alert('Purchase successful!');
-                } else {
-                    alert('Failed to make the purchase. Please try again.');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-            });
-        });
-    </script>
 </body>
 </html>

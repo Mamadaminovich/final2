@@ -29,5 +29,7 @@ urlpatterns = [
     path('register/', register, name='register'),
     path('user-login/', user_login, name='user_login'),
     path('logout/', user_logout, name='logout'),
+    path('add-to-basket', add_to_basket, name='add_to_basket'),
+    path('remove-from-basket', remove_from_basket, name='remove_from_basket'),
     path('update-ads-preference/', update_receive_ads_preference, name='update_ads_preference'),
 ]

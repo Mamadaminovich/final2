@@ -17,6 +17,13 @@ python manage.py runserver
 
 BlackHatHacker001
 
+#Migrations
+python manage.py makemigrations
+python manage.py migrate
+
+python manage.py createsuperuser
+python manage.py runserver
+
 settings.py:
 import os
 TEMPLATE = os.path.join(BASE_DIR, 'templates/')
@@ -63,13 +70,7 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'mamadaminov001@gmail.com'  # Replace with your Gmail email address
 EMAIL_HOST_PASSWORD = 'yxjg gbta qach wwei'
 
-#Migrations
-python manage.py makemigrations
-python manage.py migrate
 
-python manage.py createsuperuser
-
-python manage.py runserver
 
 html:
 {% load static %}

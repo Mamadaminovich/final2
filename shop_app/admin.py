@@ -34,7 +34,18 @@ class PurchaseAdmin(admin.ModelAdmin):
     list_display = ('customer', 'product', 'quantity', 'purchase_date') 
     search_fields = ('customer__name', 'product__name')
     list_filter = ('customer', 'product')
+    
+@admin.register(Basket)
+class BasketAdmin(admin.ModelAdmin):
+    list_display = ('user',)
+    search_fields = ('user__username',)
 
+@admin.register(BasketItem)
+class BasketItemAdmin(admin.ModelAdmin):
+    list_display = ('basket', 'product', 'quantity') 
+    search_fields = ('basket__user__username', 'product__name')
+    list_filter = ('basket__user',)
+    
 @admin.register(Item)
 class ItemAdmin(admin.ModelAdmin):
     list_display = ('product', 'quantity', 'shop_card') 

@@ -31,19 +31,33 @@ class Customer(models.Model):
             return True
         else:
             return "Not enough balance to make the purchase."
-
+    
 class Product(models.Model):
     name = models.CharField(max_length=100)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     quantity = models.IntegerField()
-    category = models.ForeignKey(Category, on_delete=models.CASCADE)
-    
+    category = models.ForeignKey('Category', on_delete=models.CASCADE)
+
     def update_quantity(self, quantity):
         self.quantity -= quantity
         self.save()
         if self.quantity <= 0:
             self.delete()
-            
+
+class Basket(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f'Basket for {self.user.username}'
+
+class BasketItem(models.Model):
+    basket = models.ForeignKey(Basket, on_delete=models.CASCADE)
+    product = models.ForeignKey('Product', on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField(default=1)
+
+    def __str__(self):
+        return f'{self.quantity} x {self.product.name} in {self.basket}'
+  
 class Purchase(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
@@ -61,7 +75,7 @@ class Purchase(models.Model):
 class ShopCard(models.Model):
     customer = models.OneToOneField(Customer, on_delete=models.CASCADE, related_name='shop_card')
     created_at = models.DateTimeField(auto_now_add=True)
-        
+
     def __str__(self) -> str:
         return str(self.customer)
     
